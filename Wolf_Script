@@ -1,0 +1,1016 @@
+-- Скрипт: Cheat Menu в стиле GrapeCheats с функцией AimLock, настройкой скорости и ватермаркой
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+local localPlayer = Players.LocalPlayer
+local noclipEnabled = false
+local espEnabled = false
+local flyEnabled = false
+local infiniteJumpEnabled = false
+local spinBotEnabled = false
+local aimlockEnabled = false
+local speedEnabled = false
+
+local noclipConnection = nil
+local flyConnection = nil
+local jumpConnection = nil
+local spinConnection = nil
+local speedConnection = nil
+local aimlockConnection = nil
+
+local flySpeed = 50
+local spinSpeed = 50
+local customWalkSpeed = 16
+local fovRadius = 100 -- Радиус круга FOV для аимлока
+
+-- Цвета для ESP
+local colors = {
+    {name = "Красный", color = Color3.fromRGB(255, 0, 0)},
+    {name = "Зеленый", color = Color3.fromRGB(0, 255, 0)},
+    {name = "Синий", color = Color3.fromRGB(0, 150, 255)},
+    {name = "Желтый", color = Color3.fromRGB(255, 255, 0)},
+    {name = "Фиолетовый", color = Color3.fromRGB(200, 0, 255)},
+    {name = "Черный", color = Color3.fromRGB(20, 20, 20)},
+    {name = "Белый", color = Color3.fromRGB(255, 255, 255)}
+}
+local currentColorIndex = 1
+
+-- Акцентные цвета интерфейса (тема меню)
+local menuAccentColors = {
+    {name = "Красный", color = Color3.fromRGB(180, 30, 30)},
+    {name = "Зеленый", color = Color3.fromRGB(30, 180, 30)},
+    {name = "Синий", color = Color3.fromRGB(30, 100, 180)},
+    {name = "Фиолетовый", color = Color3.fromRGB(130, 30, 180)},
+    {name = "Оранжевый", color = Color3.fromRGB(200, 100, 0)}
+}
+local currentMenuColorIndex = 1
+local selectedPlayerToTeleport = nil
+
+-- Удаляем старое меню
+if CoreGui:FindFirstChild("GrapeCheatsGUI") then
+    CoreGui.GrapeCheatsGUI:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "GrapeCheatsGUI"
+screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
+
+-- Ватермарка @Wolf_2711
+local watermark = Instance.new("TextLabel")
+watermark.Name = "Watermark"
+watermark.Parent = screenGui
+watermark.BackgroundTransparency = 1
+watermark.Position = UDim2.new(0, 20, 0, 60)
+watermark.Size = UDim2.new(0, 200, 0, 20)
+watermark.Font = Enum.Font.Code
+watermark.Text = "GrapeCheats | TG_@Wolf_2711 @Wolf_Pepper"
+watermark.TextColor3 = Color3.fromRGB(180, 180, 180)
+watermark.TextSize = 12
+watermark.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Кнопка открытия/закрытия меню
+local openButton = Instance.new("TextButton")
+openButton.Name = "OpenButton"
+openButton.Parent = screenGui
+openButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+openButton.Position = UDim2.new(0, 20, 0, 20)
+openButton.Size = UDim2.new(0, 80, 0, 30)
+openButton.Font = Enum.Font.Code
+openButton.Text = "MENU"
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.TextSize = 13
+
+local openStroke = Instance.new("UIStroke")
+openStroke.Color = Color3.fromRGB(60, 60, 60)
+openStroke.Thickness = 1
+openStroke.Parent = openButton
+
+-- Главное окно
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Parent = screenGui
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainFrame.Position = UDim2.new(0, 120, 0, 20)
+mainFrame.Size = UDim2.new(0, 420, 0, 320)
+mainFrame.Visible = true
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(45, 45, 45)
+mainStroke.Thickness = 1
+mainStroke.Parent = mainFrame
+
+-- Верхняя шапка
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.Parent = mainFrame
+topBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+topBar.Size = UDim2.new(1, 0, 0, 25)
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Parent = topBar
+titleLabel.BackgroundTransparency = 1
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.Size = UDim2.new(1, -50, 1, 0)
+titleLabel.Font = Enum.Font.Code
+titleLabel.Text = "GrapeCheats - 0.21.0f2"
+titleLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+titleLabel.TextSize = 12
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Шестеренка
+local settingsBtn = Instance.new("TextButton")
+settingsBtn.Parent = topBar
+settingsBtn.BackgroundTransparency = 1
+settingsBtn.Position = UDim2.new(1, -25, 0, 2)
+settingsBtn.Size = UDim2.new(0, 20, 0, 20)
+settingsBtn.Font = Enum.Font.Code
+settingsBtn.Text = "⚙"
+settingsBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+settingsBtn.TextSize = 14
+
+-- Линия акцента
+local redLine = Instance.new("Frame")
+redLine.Parent = topBar
+redLine.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+redLine.BorderSizePixel = 0
+redLine.Position = UDim2.new(0, 0, 1, 0)
+redLine.Size = UDim2.new(1, 0, 0, 2)
+
+local function updateMenuTheme()
+    local newColor = menuAccentColors[currentMenuColorIndex].color
+    redLine.BackgroundColor3 = newColor
+end
+
+-- Меню настроек темы
+local settingsDropdown = Instance.new("Frame")
+settingsDropdown.Parent = mainFrame
+settingsDropdown.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+settingsDropdown.Position = UDim2.new(1, -130, 0, 28)
+settingsDropdown.Size = UDim2.new(0, 125, 0, 75)
+settingsDropdown.Visible = false
+settingsDropdown.ZIndex = 20
+
+local settingsStroke = Instance.new("UIStroke")
+settingsStroke.Color = Color3.fromRGB(50, 50, 50)
+settingsStroke.Thickness = 1
+settingsStroke.Parent = settingsDropdown
+
+local settingsText = Instance.new("TextLabel")
+settingsText.Parent = settingsDropdown
+settingsText.BackgroundTransparency = 1
+settingsText.Position = UDim2.new(0, 5, 0, 5)
+settingsText.Size = UDim2.new(1, -10, 0, 15)
+settingsText.Font = Enum.Font.Code
+settingsText.Text = "Menu Theme:"
+settingsText.TextColor3 = Color3.fromRGB(160, 160, 160)
+settingsText.TextSize = 10
+settingsText.TextXAlignment = Enum.TextXAlignment.Left
+settingsText.ZIndex = 20
+
+local themeChangeBtn = Instance.new("TextButton")
+themeChangeBtn.Parent = settingsDropdown
+themeChangeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+themeChangeBtn.Position = UDim2.new(0, 5, 0, 25)
+themeChangeBtn.Size = UDim2.new(1, -10, 0, 24)
+themeChangeBtn.Font = Enum.Font.Code
+themeChangeBtn.Text = "Цвет: Красный"
+themeChangeBtn.TextColor3 = Color3.fromRGB(180, 30, 30)
+themeChangeBtn.TextSize = 10
+themeChangeBtn.ZIndex = 20
+
+local themeStroke = Instance.new("UIStroke")
+themeStroke.Color = Color3.fromRGB(60, 60, 60)
+themeStroke.Thickness = 1
+themeStroke.Parent = themeChangeBtn
+
+settingsBtn.MouseButton1Click:Connect(function()
+    settingsDropdown.Visible = not settingsDropdown.Visible
+end)
+
+themeChangeBtn.MouseButton1Click:Connect(function()
+    currentMenuColorIndex = currentMenuColorIndex + 1
+    if currentMenuColorIndex > #menuAccentColors then currentMenuColorIndex = 1 end
+    local currentTheme = menuAccentColors[currentMenuColorIndex]
+    themeChangeBtn.Text = "Цвет: " .. currentTheme.name
+    themeChangeBtn.TextColor3 = currentTheme.color
+    updateMenuTheme()
+end)
+
+-- Вкладки
+local tabsFrame = Instance.new("Frame")
+tabsFrame.Parent = mainFrame
+tabsFrame.BackgroundTransparency = 1
+tabsFrame.Position = UDim2.new(0, 8, 0, 32)
+tabsFrame.Size = UDim2.new(1, -16, 0, 24)
+
+local function createTab(name, posX)
+    local tab = Instance.new("TextButton")
+    tab.Parent = tabsFrame
+    tab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tab.Position = UDim2.new(posX, 0, 0, 0)
+    tab.Size = UDim2.new(0, 100, 0, 22)
+    tab.Font = Enum.Font.Code
+    tab.Text = name
+    tab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tab.TextSize = 11
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(50, 50, 50)
+    stroke.Thickness = 1
+    stroke.Parent = tab
+    return tab
+end
+
+local tabVisualsBtn = createTab("visuals", 0)
+local tabMiscBtn = createTab("teleport / misc", 0.26)
+
+local visualsContainer = Instance.new("Frame")
+visualsContainer.Parent = mainFrame
+visualsContainer.BackgroundTransparency = 1
+visualsContainer.Position = UDim2.new(0, 8, 0, 62)
+visualsContainer.Size = UDim2.new(1, -16, 1, -70)
+visualsContainer.Visible = true
+
+local miscContainer = Instance.new("Frame")
+miscContainer.Parent = mainFrame
+miscContainer.BackgroundTransparency = 1
+miscContainer.Position = UDim2.new(0, 8, 0, 62)
+miscContainer.Size = UDim2.new(1, -16, 1, -70)
+miscContainer.Visible = false
+
+tabVisualsBtn.MouseButton1Click:Connect(function()
+    visualsContainer.Visible = true
+    miscContainer.Visible = false
+    settingsDropdown.Visible = false
+    tabVisualsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tabMiscBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+end)
+
+tabMiscBtn.MouseButton1Click:Connect(function()
+    visualsContainer.Visible = false
+    miscContainer.Visible = true
+    settingsDropdown.Visible = false
+    tabMiscBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tabVisualsBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+end)
+
+-- Колонки
+local vLeftCol = Instance.new("ScrollingFrame")
+vLeftCol.Parent = visualsContainer
+vLeftCol.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+vLeftCol.BorderSizePixel = 0
+vLeftCol.Position = UDim2.new(0, 0, 0, 0)
+vLeftCol.Size = UDim2.new(0.48, 0, 1, -10)
+vLeftCol.CanvasSize = UDim2.new(0, 0, 0, 260)
+vLeftCol.ScrollBarThickness = 4
+
+local vLeftStroke = Instance.new("UIStroke")
+vLeftStroke.Color = Color3.fromRGB(40, 40, 40)
+vLeftStroke.Thickness = 1
+vLeftStroke.Parent = vLeftCol
+
+local vRightCol = Instance.new("ScrollingFrame")
+vRightCol.Parent = visualsContainer
+vRightCol.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+vRightCol.BorderSizePixel = 0
+vRightCol.Position = UDim2.new(0.52, 0, 0, 0)
+vRightCol.Size = UDim2.new(0.48, 0, 1, -10)
+vRightCol.CanvasSize = UDim2.new(0, 0, 0, 180)
+vRightCol.ScrollBarThickness = 4
+
+local vRightStroke = Instance.new("UIStroke")
+vRightStroke.Color = Color3.fromRGB(40, 40, 40)
+vRightStroke.Thickness = 1
+vRightStroke.Parent = vRightCol
+
+local mLeftCol = Instance.new("ScrollingFrame")
+mLeftCol.Parent = miscContainer
+mLeftCol.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mLeftCol.BorderSizePixel = 0
+mLeftCol.Position = UDim2.new(0, 0, 0, 0)
+mLeftCol.Size = UDim2.new(0.48, 0, 1, -10)
+mLeftCol.CanvasSize = UDim2.new(0, 0, 0, 250)
+mLeftCol.ScrollBarThickness = 4
+
+local mLeftStroke = Instance.new("UIStroke")
+mLeftStroke.Color = Color3.fromRGB(40, 40, 40)
+mLeftStroke.Thickness = 1
+mLeftStroke.Parent = mLeftCol
+
+local mRightCol = Instance.new("ScrollingFrame")
+mRightCol.Parent = miscContainer
+mRightCol.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mRightCol.BorderSizePixel = 0
+mRightCol.Position = UDim2.new(0.52, 0, 0, 0)
+mRightCol.Size = UDim2.new(0.48, 0, 1, -10)
+mRightCol.CanvasSize = UDim2.new(0, 0, 0, 250)
+mRightCol.ScrollBarThickness = 4
+
+local mRightStroke = Instance.new("UIStroke")
+mRightStroke.Color = Color3.fromRGB(40, 40, 40)
+mRightStroke.Thickness = 1
+mRightStroke.Parent = mRightCol
+
+local function createCheckbox(parent, text, posY)
+    local container = Instance.new("TextButton")
+    container.Parent = parent
+    container.BackgroundTransparency = 1
+    container.Position = UDim2.new(0, 8, 0, posY)
+    container.Size = UDim2.new(1, -16, 0, 20)
+    container.Text = ""
+    
+    local label = Instance.new("TextLabel")
+    label.Parent = container
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.Size = UDim2.new(1, -25, 1, 0)
+    label.Font = Enum.Font.Code
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local box = Instance.new("Frame")
+    box.Parent = container
+    box.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    box.Position = UDim2.new(1, -16, 0, 3)
+    box.Size = UDim2.new(0, 14, 0, 14)
+    
+    local boxStroke = Instance.new("UIStroke")
+    boxStroke.Color = Color3.fromRGB(70, 70, 70)
+    boxStroke.Thickness = 1
+    boxStroke.Parent = box
+    
+    return container, box, label
+end
+
+-- Элементы во вкладке Visuals
+local espBtn, espBox, espLabel = createCheckbox(vLeftCol, "Player ESP", 8)
+local aimlockBtn, aimlockBox, aimlockLabel = createCheckbox(vLeftCol, "AimLock (FOV)", 32)
+
+local colorChangeBtn = Instance.new("TextButton")
+colorChangeBtn.Parent = vLeftCol
+colorChangeBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+colorChangeBtn.Position = UDim2.new(0, 8, 0, 60)
+colorChangeBtn.Size = UDim2.new(1, -16, 0, 24)
+colorChangeBtn.Font = Enum.Font.Code
+colorChangeBtn.Text = "Color: Красный"
+colorChangeBtn.TextColor3 = Color3.fromRGB(255, 0, 0)
+colorChangeBtn.TextSize = 10
+
+local colorStroke = Instance.new("UIStroke")
+colorStroke.Color = Color3.fromRGB(50, 50, 50)
+colorStroke.Thickness = 1
+colorStroke.Parent = colorChangeBtn
+
+-- Блок вывода координат
+local coordsDisplayTitle = Instance.new("TextLabel")
+coordsDisplayTitle.Parent = vLeftCol
+coordsDisplayTitle.BackgroundTransparency = 1
+coordsDisplayTitle.Position = UDim2.new(0, 8, 0, 92)
+coordsDisplayTitle.Size = UDim2.new(1, -16, 0, 15)
+coordsDisplayTitle.Font = Enum.Font.Code
+coordsDisplayTitle.Text = "Current Coords:"
+coordsDisplayTitle.TextColor3 = Color3.fromRGB(140, 140, 140)
+coordsDisplayTitle.TextSize = 10
+coordsDisplayTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local coordsDisplayBox = Instance.new("TextLabel")
+coordsDisplayBox.Parent = vLeftCol
+coordsDisplayBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+coordsDisplayBox.Position = UDim2.new(0, 8, 0, 112)
+coordsDisplayBox.Size = UDim2.new(1, -16, 0, 40)
+coordsDisplayBox.Font = Enum.Font.Code
+coordsDisplayBox.Text = "Loading..."
+coordsDisplayBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+coordsDisplayBox.TextSize = 9
+coordsDisplayBox.TextWrapped = true
+
+local coordsDisplayStroke = Instance.new("UIStroke")
+coordsDisplayStroke.Color = Color3.fromRGB(50, 50, 50)
+coordsDisplayStroke.Thickness = 1
+coordsDisplayStroke.Parent = coordsDisplayBox
+
+-- Обновление координат в реальном времени
+RunService.RenderStepped:Connect(function()
+    local char = localPlayer.Character
+    if char then
+        local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChildWhichIsA("BasePart")
+        if rootPart then
+            local pos = rootPart.Position
+            coordsDisplayBox.Text = string.Format("X: %.1f\nY: %.1f, Z: %.1f", pos.X, pos.Y, pos.Z)
+            return
+        end
+    end
+    coordsDisplayBox.Text = "Character not found"
+end)
+
+local spinBtn, spinBox, spinLabel = createCheckbox(vRightCol, "SpinBot", 8)
+
+-- Ползунок скорости SpinBot
+local sliderBg = Instance.new("Frame")
+sliderBg.Parent = vRightCol
+sliderBg.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+sliderBg.Position = UDim2.new(0, 8, 0, 36)
+sliderBg.Size = UDim2.new(1, -16, 0, 30)
+
+local sliderStroke = Instance.new("UIStroke")
+sliderStroke.Color = Color3.fromRGB(50, 50, 50)
+sliderStroke.Thickness = 1
+sliderStroke.Parent = sliderBg
+
+local sliderTitle = Instance.new("TextLabel")
+sliderTitle.Parent = sliderBg
+sliderTitle.BackgroundTransparency = 1
+sliderTitle.Position = UDim2.new(0, 4, 0, 2)
+sliderTitle.Size = UDim2.new(1, -8, 0, 12)
+sliderTitle.Font = Enum.Font.Code
+sliderTitle.Text = "Spin Speed: 50"
+sliderTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+sliderTitle.TextSize = 9
+sliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local sliderBar = Instance.new("TextButton")
+sliderBar.Parent = sliderBg
+sliderBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+sliderBar.Position = UDim2.new(0, 4, 0, 18)
+sliderBar.Size = UDim2.new(1, -8, 0, 6)
+sliderBar.Text = ""
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Parent = sliderBar
+sliderFill.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+sliderFill.BorderSizePixel = 0
+
+local sliding = false
+sliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mousePos = UserInputService:GetMouseLocation().X
+        local barAbsolutePos = sliderBar.AbsolutePosition.X
+        local barAbsoluteSize = sliderBar.AbsoluteSize.X
+        local relX = math.clamp((mousePos - barAbsolutePos) / barAbsoluteSize, 0, 1)
+        
+        sliderFill.Size = UDim2.new(relX, 0, 1, 0)
+        spinSpeed = math.floor(relX * 200)
+        sliderTitle.Text = "Spin Speed: " .. spinSpeed
+    end
+end)
+
+-- Элементы во вкладке Misc
+local noclipBtn, noclipBox, noclipLabel = createCheckbox(mLeftCol, "NoClip", 8)
+local speedBtn, speedBox, speedLabel = createCheckbox(mLeftCol, "Custom Speed", 32)
+
+-- Ползунок WalkSpeed
+local speedSliderBg = Instance.new("Frame")
+speedSliderBg.Parent = mLeftCol
+speedSliderBg.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+speedSliderBg.Position = UDim2.new(0, 8, 0, 60)
+speedSliderBg.Size = UDim2.new(1, -16, 0, 30)
+
+local speedSliderStroke = Instance.new("UIStroke")
+speedSliderStroke.Color = Color3.fromRGB(50, 50, 50)
+speedSliderStroke.Thickness = 1
+speedSliderStroke.Parent = speedSliderBg
+
+local speedSliderTitle = Instance.new("TextLabel")
+speedSliderTitle.Parent = speedSliderBg
+speedSliderTitle.BackgroundTransparency = 1
+speedSliderTitle.Position = UDim2.new(0, 4, 0, 2)
+speedSliderTitle.Size = UDim2.new(1, -8, 0, 12)
+speedSliderTitle.Font = Enum.Font.Code
+speedSliderTitle.Text = "WalkSpeed: 16"
+speedSliderTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+speedSliderTitle.TextSize = 9
+speedSliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local speedSliderBar = Instance.new("TextButton")
+speedSliderBar.Parent = speedSliderBg
+speedSliderBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+speedSliderBar.Position = UDim2.new(0, 4, 0, 18)
+speedSliderBar.Size = UDim2.new(1, -8, 0, 6)
+speedSliderBar.Text = ""
+
+local speedSliderFill = Instance.new("Frame")
+speedSliderFill.Parent = speedSliderBar
+speedSliderFill.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+speedSliderFill.Size = UDim2.new(0, 0, 1, 0)
+speedSliderFill.BorderSizePixel = 0
+
+local speedSliding = false
+speedSliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then speedSliding = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then speedSliding = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if speedSliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mousePos = UserInputService:GetMouseLocation().X
+        local barAbsolutePos = speedSliderBar.AbsolutePosition.X
+        local barAbsoluteSize = speedSliderBar.AbsoluteSize.X
+        local relX = math.clamp((mousePos - barAbsolutePos) / barAbsoluteSize, 0, 1)
+        
+        speedSliderFill.Size = UDim2.new(relX, 0, 1, 0)
+        customWalkSpeed = math.floor(16 + (relX * 184)) -- От 16 до 200
+        speedSliderTitle.Text = "WalkSpeed: " .. customWalkSpeed
+    end
+end)
+
+local flyBtn, flyBox, flyLabel = createCheckbox(mRightCol, "Fly", 8)
+local jumpBtn, jumpBox, jumpLabel = createCheckbox(mRightCol, "Infinite Jump", 32)
+
+local tpTitle = Instance.new("TextLabel")
+tpTitle.Parent = mRightCol
+tpTitle.BackgroundTransparency = 1
+tpTitle.Position = UDim2.new(0, 8, 0, 65)
+tpTitle.Size = UDim2.new(1, -16, 0, 15)
+tpTitle.Font = Enum.Font.Code
+tpTitle.Text = "Select Player to TP:"
+tpTitle.TextColor3 = Color3.fromRGB(140, 140, 140)
+tpTitle.TextSize = 10
+tpTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local playerDropdownBtn = Instance.new("TextButton")
+playerDropdownBtn.Parent = mRightCol
+playerDropdownBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+playerDropdownBtn.Position = UDim2.new(0, 8, 0, 85)
+playerDropdownBtn.Size = UDim2.new(1, -16, 0, 24)
+playerDropdownBtn.Font = Enum.Font.Code
+playerDropdownBtn.Text = "Выбрать игрока..."
+playerDropdownBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+playerDropdownBtn.TextSize = 10
+
+local tpDropStroke = Instance.new("UIStroke")
+tpDropStroke.Color = Color3.fromRGB(50, 50, 50)
+tpDropStroke.Thickness = 1
+tpDropStroke.Parent = playerDropdownBtn
+
+local playerListFrame = Instance.new("ScrollingFrame")
+playerListFrame.Parent = mRightCol
+playerListFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+playerListFrame.Position = UDim2.new(0, 8, 0, 112)
+playerListFrame.Size = UDim2.new(1, -16, 0, 50)
+playerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+playerListFrame.ScrollBarThickness = 3
+playerListFrame.Visible = false
+
+local tpActionBtn = Instance.new("TextButton")
+tpActionBtn.Parent = mRightCol
+tpActionBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+tpActionBtn.Position = UDim2.new(0, 8, 0, 168)
+tpActionBtn.Size = UDim2.new(1, -16, 0, 22)
+tpActionBtn.Font = Enum.Font.Code
+tpActionBtn.Text = "Teleport to Player"
+tpActionBtn.TextColor3 = Color3.fromRGB(180, 30, 30)
+tpActionBtn.TextSize = 10
+
+local tpActionStroke = Instance.new("UIStroke")
+tpActionStroke.Color = Color3.fromRGB(50, 50, 50)
+tpActionStroke.Thickness = 1
+tpActionStroke.Parent = tpActionBtn
+
+local coordsTitle = Instance.new("TextLabel")
+coordsTitle.Parent = mLeftCol
+coordsTitle.BackgroundTransparency = 1
+coordsTitle.Position = UDim2.new(0, 8, 0, 98)
+coordsTitle.Size = UDim2.new(1, -16, 0, 15)
+coordsTitle.Font = Enum.Font.Code
+coordsTitle.Text = "TP to Coords (X, Y, Z):"
+coordsTitle.TextColor3 = Color3.fromRGB(140, 140, 140)
+coordsTitle.TextSize = 10
+coordsTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local coordsBox = Instance.new("TextBox")
+coordsBox.Parent = mLeftCol
+coordsBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+coordsBox.Position = UDim2.new(0, 8, 0, 118)
+coordsBox.Size = UDim2.new(1, -16, 0, 24)
+coordsBox.Font = Enum.Font.Code
+coordsBox.PlaceholderText = "0, 50, 0"
+coordsBox.Text = ""
+coordsBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+coordsBox.TextSize = 10
+
+local coordsBoxStroke = Instance.new("UIStroke")
+coordsBoxStroke.Color = Color3.fromRGB(50, 50, 50)
+coordsBoxStroke.Thickness = 1
+coordsBoxStroke.Parent = coordsBox
+
+local coordsTpBtn = Instance.new("TextButton")
+coordsTpBtn.Parent = mLeftCol
+coordsTpBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+coordsTpBtn.Position = UDim2.new(0, 8, 0, 147)
+coordsTpBtn.Size = UDim2.new(1, -16, 0, 22)
+coordsTpBtn.Font = Enum.Font.Code
+coordsTpBtn.Text = "Teleport Coords"
+coordsTpBtn.TextColor3 = Color3.fromRGB(180, 30, 30)
+coordsTpBtn.TextSize = 10
+
+local coordsTpStroke = Instance.new("UIStroke")
+coordsTpStroke.Color = Color3.fromRGB(50, 50, 50)
+coordsTpStroke.Thickness = 1
+coordsTpStroke.Parent = coordsTpBtn
+
+local function updatePlayerList()
+    for _, child in ipairs(playerListFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local yPos = 0
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= localPlayer then
+            local pBtn = Instance.new("TextButton")
+            pBtn.Parent = playerListFrame
+            pBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            pBtn.Position = UDim2.new(0, 0, 0, yPos)
+            pBtn.Size = UDim2.new(1, 0, 0, 20)
+            pBtn.Font = Enum.Font.Code
+            pBtn.Text = p.Name
+            pBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+            pBtn.TextSize = 10
+            
+            pBtn.MouseButton1Click:Connect(function()
+                selectedPlayerToTeleport = p
+                playerDropdownBtn.Text = p.Name
+                playerListFrame.Visible = false
+            end)
+            yPos = yPos + 20
+        end
+    end
+    playerListFrame.CanvasSize = UDim2.new(0, 0, 0, yPos)
+end
+
+playerDropdownBtn.MouseButton1Click:Connect(function()
+    updatePlayerList()
+    playerListFrame.Visible = not playerListFrame.Visible
+end)
+
+tpActionBtn.MouseButton1Click:Connect(function()
+    if selectedPlayerToTeleport and selectedPlayerToTeleport.Character then
+        local targetPart = selectedPlayerToTeleport.Character:FindFirstChild("HumanoidRootPart") or selectedPlayerToTeleport.Character:FindFirstChildWhichIsA("BasePart")
+        local myChar = localPlayer.Character
+        local myPart = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChildWhichIsA("BasePart"))
+        if targetPart and myPart then
+            myPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+end)
+
+coordsTpBtn.MouseButton1Click:Connect(function()
+    local text = coordsBox.Text
+    local success, x, y, z = pcall(function()
+        local split = string.split(text, ",")
+        return tonumber(split[1]), tonumber(split[2]), tonumber(split[3])
+    end)
+    if success and x and y and z then
+        local myChar = localPlayer.Character
+        local myPart = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChildWhichIsA("BasePart"))
+        if myPart then
+            myPart.CFrame = CFrame.new(x, y, z)
+        end
+    end
+end)
+
+openButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- Функции читов
+local function updateHighlightColors()
+    local activeColorData = colors[currentColorIndex]
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            local highlight = player.Character:FindFirstChild("PlayerHighlight")
+            if highlight then highlight.FillColor = activeColorData.color end
+        end
+    end
+end
+
+local function applyHighlight(character)
+    if not character:FindFirstChild("PlayerHighlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "PlayerHighlight"
+        highlight.Adornee = character
+        highlight.Parent = character
+        highlight.FillColor = colors[currentColorIndex].color
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.4
+        highlight.OutlineTransparency = 0
+    end
+end
+
+local function removeHighlight(character)
+    local highlight = character:FindFirstChild("PlayerHighlight")
+    if highlight then highlight:Destroy() end
+end
+
+local function toggleEsp()
+    espEnabled = not espEnabled
+    if espEnabled then
+        espBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        espLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer and player.Character then applyHighlight(player.Character) end
+        end
+    else
+        espBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        espLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then removeHighlight(player.Character) end
+        end
+    end
+end
+
+colorChangeBtn.MouseButton1Click:Connect(function()
+    currentColorIndex = currentColorIndex + 1
+    if currentColorIndex > #colors then currentColorIndex = 1 end
+    local current = colors[currentColorIndex]
+    colorChangeBtn.Text = "Color: " .. current.name
+    colorChangeBtn.TextColor3 = current.color
+    updateHighlightColors()
+end)
+
+-- Логика AimLock с Raycast через стены
+local function getClosestPlayerInFOV()
+    local camera = workspace.CurrentCamera
+    local mousePos = UserInputService:GetMouseLocation()
+    local closestTarget = nil
+    local shortestDistance = fovRadius
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local rootPart = player.Character:FindFirstChild("HumanoidRootPart") or player.Character:FindFirstChild("Head")
+            
+            if humanoid and humanoid.Health > 0 and rootPart then
+                local screenPoint, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+                if onScreen then
+                    local screenPos2D = Vector2.new(screenPoint.X, screenPoint.Y)
+                    local distance = (mousePos - screenPos2D).Magnitude
+
+                    if distance < shortestDistance then
+                        local origin = camera.CFrame.Position
+                        local direction = (rootPart.Position - origin)
+                        
+                        local raycastParams = RaycastParams.new()
+                        raycastParams.FilterDescendantsInstances = {localPlayer.Character, camera}
+                        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                        
+                        local result = workspace:Raycast(origin, direction, raycastParams)
+                        
+                        if result and result.Instance:IsDescendantOf(player.Character) then
+                            closestTarget = rootPart
+                            shortestDistance = distance
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestTarget
+end
+
+local function toggleAimlock()
+    aimlockEnabled = not aimlockEnabled
+    if aimlockEnabled then
+        aimlockBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        aimlockLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
+        aimlockConnection = RunService.RenderStepped:Connect(function()
+            if not aimlockEnabled then return end
+            local targetPart = getClosestPlayerInFOV()
+            if targetPart then
+                local camera = workspace.CurrentCamera
+                local targetCFrame = CFrame.lookAt(camera.CFrame.Position, targetPart.Position)
+                camera.CFrame = camera.CFrame:Lerp(targetCFrame, 0.3)
+            end
+        end)
+    else
+        aimlockBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        aimlockLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if aimlockConnection then
+            aimlockConnection:Disconnect()
+            aimlockConnection = nil
+        end
+    end
+end
+
+local function toggleSpinBot()
+    spinBotEnabled = not spinBotEnabled
+    if spinBotEnabled then
+        spinBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        spinLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        spinConnection = RunService.RenderStepped:Connect(function()
+            if not spinBotEnabled then return end
+            local character = localPlayer.Character
+            local hrp = character and (character:FindFirstChild("HumanoidRootPart") or character:FindFirstChildWhichIsA("BasePart"))
+            if hrp then
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+            end
+        end)
+    else
+        spinBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        spinLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if spinConnection then spinConnection:Disconnect(); spinConnection = nil end
+    end
+end
+
+local function toggleNoclip()
+    noclipEnabled = not noclipEnabled
+    if noclipEnabled then
+        noclipBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        noclipLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        if not noclipConnection then
+            noclipConnection = RunService.Stepped:Connect(function()
+                if not noclipEnabled then return end
+                local character = localPlayer.Character
+                if character then
+                    for _, part in ipairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        noclipBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        noclipLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if noclipConnection then noclipConnection:Disconnect(); noclipConnection = nil end
+    end
+end
+
+local function toggleSpeed()
+    speedEnabled = not speedEnabled
+    if speedEnabled then
+        speedBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        speedConnection = RunService.RenderStepped:Connect(function()
+            if not speedEnabled then return end
+            local character = localPlayer.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = customWalkSpeed
+            end
+        end)
+    else
+        speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        speedLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if speedConnection then speedConnection:Disconnect(); speedConnection = nil end
+        local character = localPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16 -- Сброс к дефолтной скорости
+        end
+    end
+end
+
+local function toggleFly()
+    flyEnabled = not flyEnabled
+    local character = localPlayer.Character
+    local hrp = character and (character:FindFirstChild("HumanoidRootPart") or character:FindFirstChildWhichIsA("BasePart"))
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not hrp then return end
+    
+    if flyEnabled then
+        flyBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        flyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
+        local bg = Instance.new("BodyGyro")
+        bg.Name = "FlyGyro"
+        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bg.CFrame = hrp.CFrame
+        bg.Parent = hrp
+        
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "FlyVelocity"
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.Parent = hrp
+        
+        if humanoid then humanoid.PlatformStand = true end
+        
+        flyConnection = RunService.RenderStepped:Connect(function()
+            if not flyEnabled or not character or not hrp.Parent then return end
+            local camera = workspace.CurrentCamera
+            local moveDirection = Vector3.new(0, 0, 0)
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + camera.CFrame.RightVector end
+            
+            bv.Velocity = moveDirection * flySpeed
+            bg.CFrame = camera.CFrame
+        end)
+    else
+        flyBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        flyLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
+        if hrp:FindFirstChild("FlyGyro") then hrp.FlyGyro:Destroy() end
+        if hrp:FindFirstChild("FlyVelocity") then hrp.FlyVelocity:Destroy() end
+        if humanoid then humanoid.PlatformStand = false end
+    end
+end
+
+local function toggleInfiniteJump()
+    infiniteJumpEnabled = not infiniteJumpEnabled
+    if infiniteJumpEnabled then
+        jumpBox.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        jumpLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        jumpConnection = UserInputService.JumpRequest:Connect(function()
+            if not infiniteJumpEnabled then return end
+            local character = localPlayer.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    else
+        jumpBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        jumpLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        if jumpConnection then jumpConnection:Disconnect(); jumpConnection = nil end
+    end
+end
+
+espBtn.MouseButton1Click:Connect(toggleEsp)
+aimlockBtn.MouseButton1Click:Connect(toggleAimlock)
+spinBtn.MouseButton1Click:Connect(toggleSpinBot)
+noclipBtn.MouseButton1Click:Connect(toggleNoclip)
+speedBtn.MouseButton1Click:Connect(toggleSpeed)
+flyBtn.MouseButton1Click:Connect(toggleFly)
+jumpBtn.MouseButton1Click:Connect(toggleInfiniteJump)
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(char)
+        if espEnabled then
+            char:WaitForChild("HumanoidRootPart", 5)
+            applyHighlight(char)
+        end
+    end)
+end)
+
+-- Перетаскивание главного окна
+local dragging, dragInput, dragStart, startPos
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+topBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Изменение размера окна
+local resizing = false
+local resizeStart = nil
+local startSize = nil
+
+local resizeHandle = Instance.new("TextButton")
+resizeHandle.Parent = mainFrame
+resizeHandle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+resizeHandle.BorderSizePixel = 0
+resizeHandle.Position = UDim2.new(1, -12, 1, -12)
+resizeHandle.Size = UDim2.new(0, 12, 0, 12)
+resizeHandle.Text = ""
+resizeHandle.ZIndex = 10
+
+resizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        resizing = true
+        resizeStart = input.Position
+        startSize = mainFrame.AbsoluteSize
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then resizing = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - resizeStart
+        local newWidth = math.clamp(startSize.X + delta.X, 300, 800)
+        local newHeight = math.clamp(startSize.Y + delta.Y, 200, 600)
+        mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+    end
+end)
